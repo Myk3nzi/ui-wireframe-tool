@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>UI Wireframe Tool</title>
+<title>UI Wireframe Tool — Fixed Buttons</title>
 <style>
   :root{--sidebar:320px;--gap:10px}
   body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;gap:var(--gap)}
@@ -26,6 +26,9 @@
   #jsonArea{width:100%;height:120px;box-sizing:border-box}
   .muted{color:#6b7280;font-size:13px}
   small{color:#6b7280}
+  #previewOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);align-items:center;justify-content:center}
+  #previewWindow{width:420px;height:800px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.35);position:relative}
+  #previewCanvas{width:100%;height:100%;position:relative;background:#f7f7f7;overflow:hidden}
 </style>
 </head>
 <body>
@@ -85,7 +88,11 @@
             <option value="navigate">Navigate to page</option>
           </select>
         </label>
-        <label id="actionValueLabel">Action value<input id="actionValue" placeholder="Message, URL, or page id" /></label>
+
+        <label id="actionValueLabel">Action value
+          <input id="actionValue" placeholder="Message, URL, or page id" />
+          <select id="actionPageSelect" style="margin-top:6px;display:none"></select>
+        </label>
 
         <div class="row" style="margin-top:8px">
           <button id="applyBtn">Apply</button>
@@ -139,17 +146,16 @@
     </div>
   </div>
 
-  <div id="previewOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);align-items:center;justify-content:center">
-    <div id="previewWindow" style="width:420px;height:800px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.35)">
-      <div id="previewCanvas" style="width:100%;height:100%;position:relative;background:#f7f7f7"></div>
+  <div id="previewOverlay">
+    <div id="previewWindow">
+      <div id="previewCanvas"></div>
     </div>
   </div>
 
 <script>
-/* Standalone wireframe editor with gradients and actions */
+/* Fixed buttons: robust event wiring and page-select for navigate action */
 const state = { pages: [], currentPageId: null, selected: null, device:{w:1024,h:700} };
 
-/* Elements */
 const pagesList = document.getElementById('pagesList');
 const canvas = document.getElementById('canvas');
 const deviceFrame = document.getElementById('deviceFrame');
@@ -173,7 +179,7 @@ const textColor = document.getElementById('textColor');
 
 const actionType = document.getElementById('actionType');
 const actionValue = document.getElementById('actionValue');
-const actionValueLabel = document.getElementById('actionValueLabel');
+const actionPageSelect = document.getElementById('actionPageSelect');
 
 const applyBtn = document.getElementById('applyBtn');
 const deleteBtn = document.getElementById('deleteBtn');
@@ -189,14 +195,10 @@ const previewOverlay = document.getElementById('previewOverlay');
 const previewCanvas = document.getElementById('previewCanvas');
 const copyBtn = document.getElementById('copyBtn');
 
-/* Utilities */
-const mkId = (p='id') => p + '_' + Math.random().toString(36).slice(2,9);
+function mkId(p='id'){ return p + '_' + Math.random().toString(36).slice(2,9); }
 function findPage(id){ return state.pages.find(p=>p.id===id); }
-function setDeviceFromKey(key){
-  const [w,h] = key.split('x').map(Number); state.device.w=w; state.device.h=h; applyDevice();
-}
+
 function applyDevice(){
-  // scale deviceFrame to fit viewport with padding
   const maxW = Math.min(window.innerWidth - 420, 1200);
   const maxH = window.innerHeight - 140;
   const scale = Math.min(maxW / state.device.w, maxH / state.device.h, 1);
@@ -209,7 +211,6 @@ function applyDevice(){
   sizeInfo.textContent = state.device.w + ' × ' + state.device.h;
 }
 
-/* Render pages list */
 function renderPagesList(){
   pagesList.innerHTML = '';
   state.pages.forEach(p=>{
@@ -225,9 +226,12 @@ function renderPagesList(){
     pagesList.appendChild(div);
   });
   document.getElementById('currentPageTitle').textContent = findPage(state.currentPageId)?.name || 'No page';
+  // update action page select
+  actionPageSelect.innerHTML = '';
+  const emptyOpt = document.createElement('option'); emptyOpt.value=''; emptyOpt.textContent='Select page'; actionPageSelect.appendChild(emptyOpt);
+  state.pages.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; actionPageSelect.appendChild(o); });
 }
 
-/* Render canvas elements */
 function render(){
   renderPagesList();
   canvas.innerHTML = '';
@@ -242,14 +246,12 @@ function render(){
     d.style.color = el.textColor || '#000';
     d.textContent = el.label || (el.type==='button' ? 'Button' : 'Box');
     d.dataset.id = el.id;
-    // background handling (solid or gradient)
-    if(el.bgType === 'solid') d.style.background = el.bgA || '#ffffff';
-    else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir || 'to right'}, ${el.bgA}, ${el.bgB})`;
+    if(el.bgType === 'solid') d.style.background = el.bgA || '#fff';
+    else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir||'to right'}, ${el.bgA}, ${el.bgB})`;
     else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
-    // styling based on type
     if(el.type==='button'){ d.style.borderRadius = el.radius || '8px'; d.style.padding = '6px 12px'; d.style.border = 'none'; }
-    d.onmousedown = startDrag;
-    d.ondblclick = ()=> { state.selected = { pageId: page.id, id: el.id }; openSelected(); };
+    d.addEventListener('mousedown', startDrag);
+    d.addEventListener('dblclick', ()=>{ state.selected = { pageId: page.id, id: el.id }; openSelected(); });
     canvas.appendChild(d);
   });
   openSelected();
@@ -263,8 +265,8 @@ function startDrag(e){
   const page = findPage(state.currentPageId);
   const el = page.elements.find(it=>it.id===id);
   drag = { el, offsetX: e.offsetX, offsetY: e.offsetY };
-  document.onmousemove = dragging;
-  document.onmouseup = endDrag;
+  document.addEventListener('mousemove', dragging);
+  document.addEventListener('mouseup', endDrag, { once: true });
 }
 function dragging(e){
   if(!drag) return;
@@ -273,18 +275,18 @@ function dragging(e){
   drag.el.y = Math.max(0, Math.round(e.clientY - rect.top - drag.offsetY));
   render();
 }
-function endDrag(){ document.onmousemove = null; document.onmouseup = null; drag = null; }
+function endDrag(){ document.removeEventListener('mousemove', dragging); drag = null; }
 
-/* Element creation */
+/* Creation */
 addPageBtn.onclick = ()=>{ const name = newPageName.value.trim() || 'Page'; createPage(name); newPageName.value=''; };
 function createPage(name){ const p = { id: mkId('page'), name: name || 'Page', elements: [] }; state.pages.push(p); state.currentPageId = p.id; renderPagesList(); render(); }
 addBox.onclick = ()=>{ const p = findPage(state.currentPageId); if(!p) return alert('Create a page first'); p.elements.push({ id: mkId('el'), type:'box', x:40, y:40, width:200, height:120, label:'Box', bgType:'solid', bgA:'#ffffff', bgB:'#ffffff', bgDir:'to right', textColor:'#000' }); render(); }
 addButton.onclick = ()=>{ const p = findPage(state.currentPageId); if(!p) return alert('Create a page first'); p.elements.push({ id: mkId('el'), type:'button', x:40, y:180, width:160, height:44, label:'Action', bgType:'solid', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', action:{type:'',value:''} }); render(); }
 
-/* Selection */
+/* Selection and apply */
 function openSelected(){
   const s = state.selected;
-  if(!s){ selInfo.textContent='None'; labelInput.value=''; widthInput.value=''; heightInput.value=''; bgType.value='solid'; bgA.value='#ffffff'; bgB.value='#ffffff'; bgDir.value='to right'; textColor.value='#000000'; actionType.value=''; actionValue.value=''; return; }
+  if(!s){ selInfo.textContent='None'; labelInput.value=''; widthInput.value=''; heightInput.value=''; bgType.value='solid'; bgA.value='#ffffff'; bgB.value='#ffffff'; bgDir.value='to right'; textColor.value='#000000'; actionType.value=''; actionValue.value=''; actionPageSelect.style.display='none'; return; }
   const page = findPage(s.pageId); const el = page.elements.find(x=>x.id===s.id);
   if(!el) return;
   selInfo.textContent = el.type + ' • ' + el.id;
@@ -298,12 +300,12 @@ function openSelected(){
   textColor.value = el.textColor || '#000000';
   actionType.value = el.action?.type || '';
   actionValue.value = el.action?.value || '';
+  actionPageSelect.value = el.action?.value || '';
   updateBgControls();
   updateActionControls();
 }
-canvas.onclick = (e)=>{ if(e.target === canvas){ state.selected = null; openSelected(); render(); } };
+canvas.addEventListener('click', (e)=>{ if(e.target === canvas){ state.selected = null; openSelected(); render(); } });
 
-/* Apply / Delete */
 applyBtn.onclick = ()=>{
   const s = state.selected; if(!s) return alert('No element selected');
   const page = findPage(s.pageId); const el = page.elements.find(x=>x.id===s.id);
@@ -313,7 +315,11 @@ applyBtn.onclick = ()=>{
   el.bgType = bgType.value;
   el.bgA = bgA.value; el.bgB = bgB.value; el.bgDir = bgDir.value;
   el.textColor = textColor.value;
-  el.action = { type: actionType.value, value: actionValue.value };
+  // store action; choose page-select value if navigate
+  const at = actionType.value;
+  let av = actionValue.value;
+  if(at === 'navigate' && actionPageSelect.value) av = actionPageSelect.value;
+  el.action = { type: at, value: av };
   render();
 };
 deleteBtn.onclick = ()=>{
@@ -322,7 +328,7 @@ deleteBtn.onclick = ()=>{
   state.selected = null; render();
 };
 
-/* UI helpers for conditional controls */
+/* UI helpers */
 bgType.onchange = updateBgControls;
 function updateBgControls(){
   const t = bgType.value;
@@ -332,33 +338,36 @@ function updateBgControls(){
 actionType.onchange = updateActionControls;
 function updateActionControls(){
   const t = actionType.value;
-  if(t === 'navigate'){ actionValue.placeholder = 'Select or paste page id'; }
-  else if(t === 'openUrl'){ actionValue.placeholder = 'https://example.com'; }
-  else if(t === 'alert'){ actionValue.placeholder = 'Message to display'; }
-  else { actionValue.placeholder = ''; }
+  if(t === 'navigate'){ actionValue.style.display='none'; actionPageSelect.style.display='block'; }
+  else { actionValue.style.display='block'; actionPageSelect.style.display='none'; }
 }
 
 /* Export / Import / Copy */
 exportBtn.onclick = ()=>{ jsonArea.value = JSON.stringify(state, null, 2); };
-importBtn.onclick = ()=>{ try{ const data = JSON.parse(jsonArea.value); if(!data.pages) throw new Error('Invalid format'); state.pages = data.pages; state.currentPageId = data.currentPageId || data.pages[0]?.id || null; state.device = data.device || state.device; state.selected = null; setDeviceFromKey((state.device.w||1024)+'x'+(state.device.h||700)); render(); }catch(e){ alert('Import failed: '+e.message); } };
+importBtn.onclick = ()=>{ try{ const data = JSON.parse(jsonArea.value); if(!data.pages) throw new Error('Invalid format'); state.pages = data.pages; state.currentPageId = data.currentPageId || data.pages[0]?.id || null; state.device = data.device || state.device; state.selected = null; renderPagesList(); render(); }catch(e){ alert('Import failed: '+e.message); } };
 copyBtn.onclick = async ()=>{ const txt = jsonArea.value || JSON.stringify(state, null, 2); try{ await navigator.clipboard.writeText(txt); alert('Copied JSON'); }catch(e){ alert('Copy failed'); } };
 
-/* Preview mode (runs actions) */
+/* Preview mode — fixed event wiring */
 previewBtn.onclick = ()=> openPreview(state.currentPageId || state.pages[0]?.id);
 function openPreview(startPageId){
-  previewOverlay.style.display='flex';
+  previewOverlay.style.display = 'flex';
   renderPreviewPage(startPageId);
-  previewOverlay.onclick = (e)=>{ if(e.target===previewOverlay) previewOverlay.style.display='none'; };
+  // close only when clicking the overlay backdrop, not inside previewWindow
+  previewOverlay.addEventListener('click', function onBack(e){
+    if(e.target === previewOverlay){ previewOverlay.style.display='none'; previewOverlay.removeEventListener('click', onBack); }
+  });
 }
 function renderPreviewPage(pageId){
   previewCanvas.innerHTML = '';
   const page = findPage(pageId); if(!page) return;
   const frame = document.createElement('div'); frame.style.width='100%'; frame.style.height='100%'; frame.style.position='relative'; frame.style.background='#f7f7f7';
+  // scale to preview window (420x800)
+  const previewW = 420, previewH = 800;
+  const sx = previewW / state.device.w, sy = previewH / state.device.h;
   page.elements.forEach(el=>{
     const d = document.createElement('div'); d.style.position='absolute';
-    const scaleW = 420 / state.device.w; const scaleH = 800 / state.device.h;
-    d.style.left = (el.x * scaleW) + 'px'; d.style.top = (el.y * scaleH) + 'px';
-    d.style.width = (el.width * scaleW) + 'px'; d.style.height = (el.height * scaleH) + 'px';
+    d.style.left = (el.x * sx) + 'px'; d.style.top = (el.y * sy) + 'px';
+    d.style.width = (el.width * sx) + 'px'; d.style.height = (el.height * sy) + 'px';
     d.style.display='flex'; d.style.alignItems='center'; d.style.justifyContent='center'; d.style.boxSizing='border-box';
     d.style.color = el.textColor || '#000';
     if(el.bgType === 'solid') d.style.background = el.bgA;
@@ -366,13 +375,16 @@ function renderPreviewPage(pageId){
     else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
     d.textContent = el.label || '';
     d.style.border = '1px solid rgba(0,0,0,0.08)';
-    d.style.cursor = el.action?.type ? 'pointer' : 'default';
+    // attach action handlers using addEventListener to ensure they work
     if(el.action?.type === 'navigate' && el.action.value){
-      d.onclick = (e)=>{ e.stopPropagation(); renderPreviewPage(el.action.value); };
+      d.style.cursor = 'pointer';
+      d.addEventListener('click', (ev)=>{ ev.stopPropagation(); renderPreviewPage(el.action.value); });
     } else if(el.action?.type === 'openUrl' && el.action.value){
-      d.onclick = (e)=>{ e.stopPropagation(); window.open(el.action.value, '_blank'); };
+      d.style.cursor = 'pointer';
+      d.addEventListener('click', (ev)=>{ ev.stopPropagation(); window.open(el.action.value, '_blank'); });
     } else if(el.action?.type === 'alert' && el.action.value){
-      d.onclick = (e)=>{ e.stopPropagation(); alert(el.action.value); };
+      d.style.cursor = 'pointer';
+      d.addEventListener('click', (ev)=>{ ev.stopPropagation(); alert(el.action.value); });
     }
     frame.appendChild(d);
   });
@@ -380,20 +392,24 @@ function renderPreviewPage(pageId){
 }
 
 /* Device handling */
-deviceSelect.onchange = ()=> setDeviceFromKey(deviceSelect.value);
+deviceSelect.onchange = ()=> {
+  const [w,h] = deviceSelect.value.split('x').map(Number);
+  state.device.w = w; state.device.h = h; applyDevice();
+};
 fitBtn.onclick = () => applyDevice();
-function setDeviceFromKey(key){ const [w,h] = key.split('x').map(Number); state.device.w=w; state.device.h=h; applyDevice(); }
 window.onresize = applyDevice;
 
 /* Initialize demo content */
-setDeviceFromKey('1024x700');
-createPage('Home'); createPage('Details');
-state.pages[0].elements.push({ id: mkId('e'), type:'button', x:220, y:220, width:220, height:56, label:'Go to Details', bgType:'linear', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', action:{type:'navigate',value: state.pages[1].id} });
-state.pages[1].elements.push({ id: mkId('e'), type:'box', x:80, y:80, width:860, height:520, label:'Details', bgType:'solid', bgA:'#ffffff', textColor:'#111' });
-render();
+setTimeout(()=>{ // slight delay so UI elements exist
+  state.device.w = 1024; state.device.h = 700; applyDevice();
+  createPage('Home'); createPage('Details');
+  state.pages[0].elements.push({ id: mkId('e'), type:'button', x:220, y:220, width:220, height:56, label:'Go to Details', bgType:'linear', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', action:{type:'navigate',value: state.pages[1].id} });
+  state.pages[1].elements.push({ id: mkId('e'), type:'box', x:80, y:80, width:860, height:520, label:'Details', bgType:'solid', bgA:'#ffffff', textColor:'#111' });
+  render();
+}, 60);
 
-/* Small helpers */
-function mkId(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+/* helper for createPage accessible inside setTimeout */
+function createPage(name){ const p = { id: mkId('page'), name: name || 'Page', elements: [] }; state.pages.push(p); state.currentPageId = p.id; renderPagesList(); render(); }
 </script>
 </body>
 </html>
