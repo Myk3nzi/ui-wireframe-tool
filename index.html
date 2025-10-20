@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UI Wireframe Tool</title>
+<style>
+  :root{--sidebar:320px;--gap:10px}
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;height:100vh;display:flex;gap:var(--gap)}
+  #sidebar{width:var(--sidebar);padding:14px;box-sizing:border-box;border-right:1px solid #e6e6e6;background:#fbfbfd;overflow:auto}
+  #main{flex:1;display:flex;flex-direction:column}
+  header{height:56px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid #eee}
+  #canvasWrap{flex:1;display:flex;align-items:start;justify-content:center;padding:20px;background:#fff;overflow:auto}
+  .device-frame{background:#f3f4f6;border-radius:12px;padding:16px;box-shadow:0 8px 22px rgba(12,12,12,0.06);display:flex;align-items:center;justify-content:center}
+  #canvas{position:relative;background:#fff;box-shadow:0 2px 8px rgba(10,10,10,0.04);overflow:visible}
+  .elem{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:move;user-select:none;border:1px solid rgba(0,0,0,0.08)}
+  .elem.btn{border-radius:8px;color:#fff}
+  .controls section{margin-top:12px}
+  input,select,textarea,button{font-size:13px;padding:6px;border:1px solid #ddd;border-radius:6px;background:#fff}
+  .row{display:flex;gap:8px;align-items:center}
+  #pagesList{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .pageItem{display:flex;gap:6px;align-items:center}
+  .pageItem button{padding:6px 8px}
+  .selectedPage{background:#e9f6ff}
+  label{display:flex;flex-direction:column;font-size:13px;gap:6px}
+  #jsonArea{width:100%;height:120px;box-sizing:border-box}
+  .muted{color:#6b7280;font-size:13px}
+  small{color:#6b7280}
+</style>
+</head>
+<body>
+  <div id="sidebar">
+    <strong>Pages</strong>
+    <div id="pagesList"></div>
+    <div class="row" style="margin-top:8px">
+      <input id="newPageName" placeholder="New page name" style="flex:1"/>
+      <button id="addPageBtn">Add</button>
+    </div>
+
+    <div class="controls">
+      <section>
+        <strong>Elements</strong>
+        <div class="row" style="margin-top:8px">
+          <button id="addBox">Add Box</button>
+          <button id="addButton">Add Button</button>
+        </div>
+      </section>
+
+      <section>
+        <strong>Selected element</strong>
+        <div id="selInfo" class="muted">None</div>
+        <label>Label<input id="labelInput" /></label>
+        <div class="row">
+          <label style="flex:1">W<input id="widthInput" type="number" /></label>
+          <label style="flex:1">H<input id="heightInput" type="number" /></label>
+        </div>
+        <label>Background type
+          <select id="bgType">
+            <option value="solid">Solid</option>
+            <option value="linear">Linear gradient</option>
+            <option value="radial">Radial gradient</option>
+          </select>
+        </label>
+        <div class="row">
+          <label style="flex:1">Color A<input id="bgA" type="color" /></label>
+          <label style="flex:1">Color B<input id="bgB" type="color" /></label>
+        </div>
+        <label id="dirLabel">Direction
+          <select id="bgDir">
+            <option value="to right">to right</option>
+            <option value="to left">to left</option>
+            <option value="to bottom">to bottom</option>
+            <option value="to top">to top</option>
+            <option value="45deg">45deg</option>
+          </select>
+        </label>
+
+        <label>Text color<input id="textColor" type="color" /></label>
+
+        <label>Action type
+          <select id="actionType">
+            <option value="">None</option>
+            <option value="alert">Show alert</option>
+            <option value="openUrl">Open URL</option>
+            <option value="navigate">Navigate to page</option>
+          </select>
+        </label>
+        <label id="actionValueLabel">Action value<input id="actionValue" placeholder="Message, URL, or page id" /></label>
+
+        <div class="row" style="margin-top:8px">
+          <button id="applyBtn">Apply</button>
+          <button id="deleteBtn">Delete</button>
+        </div>
+      </section>
+
+      <section>
+        <strong>Devices</strong>
+        <div class="row" style="margin-top:8px">
+          <select id="deviceSelect" style="flex:1">
+            <option value="1366x768">Desktop 1366×768</option>
+            <option value="1280x800">Laptop 1280×800</option>
+            <option value="1024x768">Laptop 1024×768</option>
+            <option value="1024x1366">iPad Pro 1024×1366</option>
+            <option value="768x1024">Tablet 768×1024</option>
+            <option value="414x896">Mobile Large 414×896</option>
+            <option value="375x812">Mobile 375×812</option>
+          </select>
+          <button id="fitBtn">Fit</button>
+        </div>
+        <div style="margin-top:8px"><small>Canvas size: <span id="sizeInfo">—</span></small></div>
+      </section>
+
+      <section>
+        <strong>Project</strong>
+        <div class="row" style="margin-top:8px">
+          <button id="exportBtn">Export JSON</button>
+          <button id="importBtn">Import JSON</button>
+        </div>
+        <textarea id="jsonArea" placeholder="Project JSON"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button id="previewBtn">Preview</button>
+          <button id="copyBtn">Copy JSON</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="main">
+    <header>
+      <strong id="currentPageTitle">No page</strong>
+      <div style="flex:1"></div>
+      <small class="muted">Scale preview when editing</small>
+    </header>
+
+    <div id="canvasWrap">
+      <div id="deviceFrame" class="device-frame">
+        <div id="canvas" style="width:1024px;height:700px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="previewOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);align-items:center;justify-content:center">
+    <div id="previewWindow" style="width:420px;height:800px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.35)">
+      <div id="previewCanvas" style="width:100%;height:100%;position:relative;background:#f7f7f7"></div>
+    </div>
+  </div>
+
+<script>
+/* Standalone wireframe editor with gradients and actions */
+const state = { pages: [], currentPageId: null, selected: null, device:{w:1024,h:700} };
+
+/* Elements */
+const pagesList = document.getElementById('pagesList');
+const canvas = document.getElementById('canvas');
+const deviceFrame = document.getElementById('deviceFrame');
+const sizeInfo = document.getElementById('sizeInfo');
+
+const newPageName = document.getElementById('newPageName');
+const addPageBtn = document.getElementById('addPageBtn');
+const addBox = document.getElementById('addBox');
+const addButton = document.getElementById('addButton');
+
+const selInfo = document.getElementById('selInfo');
+const labelInput = document.getElementById('labelInput');
+const widthInput = document.getElementById('widthInput');
+const heightInput = document.getElementById('heightInput');
+const bgType = document.getElementById('bgType');
+const bgA = document.getElementById('bgA');
+const bgB = document.getElementById('bgB');
+const bgDir = document.getElementById('bgDir');
+const dirLabel = document.getElementById('dirLabel');
+const textColor = document.getElementById('textColor');
+
+const actionType = document.getElementById('actionType');
+const actionValue = document.getElementById('actionValue');
+const actionValueLabel = document.getElementById('actionValueLabel');
+
+const applyBtn = document.getElementById('applyBtn');
+const deleteBtn = document.getElementById('deleteBtn');
+
+const deviceSelect = document.getElementById('deviceSelect');
+const fitBtn = document.getElementById('fitBtn');
+
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const jsonArea = document.getElementById('jsonArea');
+const previewBtn = document.getElementById('previewBtn');
+const previewOverlay = document.getElementById('previewOverlay');
+const previewCanvas = document.getElementById('previewCanvas');
+const copyBtn = document.getElementById('copyBtn');
+
+/* Utilities */
+const mkId = (p='id') => p + '_' + Math.random().toString(36).slice(2,9);
+function findPage(id){ return state.pages.find(p=>p.id===id); }
+function setDeviceFromKey(key){
+  const [w,h] = key.split('x').map(Number); state.device.w=w; state.device.h=h; applyDevice();
+}
+function applyDevice(){
+  // scale deviceFrame to fit viewport with padding
+  const maxW = Math.min(window.innerWidth - 420, 1200);
+  const maxH = window.innerHeight - 140;
+  const scale = Math.min(maxW / state.device.w, maxH / state.device.h, 1);
+  deviceFrame.style.width = (state.device.w * scale + 32) + 'px';
+  deviceFrame.style.height = (state.device.h * scale + 32) + 'px';
+  canvas.style.width = state.device.w + 'px';
+  canvas.style.height = state.device.h + 'px';
+  canvas.style.transform = 'scale(' + scale + ')';
+  canvas.style.transformOrigin = 'top left';
+  sizeInfo.textContent = state.device.w + ' × ' + state.device.h;
+}
+
+/* Render pages list */
+function renderPagesList(){
+  pagesList.innerHTML = '';
+  state.pages.forEach(p=>{
+    const div = document.createElement('div'); div.className='pageItem';
+    if(p.id === state.currentPageId) div.classList.add('selectedPage');
+    const btn = document.createElement('button'); btn.textContent = p.name;
+    btn.onclick = ()=> { state.currentPageId = p.id; render(); };
+    const rn = document.createElement('button'); rn.textContent='Rename';
+    rn.onclick = ()=> { const n = prompt('Rename page', p.name); if(n){ p.name=n; renderPagesList(); render(); } };
+    const del = document.createElement('button'); del.textContent='Delete';
+    del.onclick = ()=> { if(!confirm('Delete page?')) return; state.pages = state.pages.filter(x=>x.id!==p.id); if(state.currentPageId===p.id) state.currentPageId = state.pages[0]?.id || null; renderPagesList(); render(); };
+    div.appendChild(btn); div.appendChild(rn); div.appendChild(del);
+    pagesList.appendChild(div);
+  });
+  document.getElementById('currentPageTitle').textContent = findPage(state.currentPageId)?.name || 'No page';
+}
+
+/* Render canvas elements */
+function render(){
+  renderPagesList();
+  canvas.innerHTML = '';
+  const page = findPage(state.currentPageId);
+  if(!page) return;
+  page.elements.forEach(el=>{
+    const d = document.createElement('div');
+    d.className = 'elem' + (el.type==='button' ? ' btn' : '');
+    d.style.left = el.x + 'px'; d.style.top = el.y + 'px';
+    d.style.width = el.width + 'px'; d.style.height = el.height + 'px';
+    d.style.display = 'flex'; d.style.alignItems='center'; d.style.justifyContent='center';
+    d.style.color = el.textColor || '#000';
+    d.textContent = el.label || (el.type==='button' ? 'Button' : 'Box');
+    d.dataset.id = el.id;
+    // background handling (solid or gradient)
+    if(el.bgType === 'solid') d.style.background = el.bgA || '#ffffff';
+    else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir || 'to right'}, ${el.bgA}, ${el.bgB})`;
+    else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
+    // styling based on type
+    if(el.type==='button'){ d.style.borderRadius = el.radius || '8px'; d.style.padding = '6px 12px'; d.style.border = 'none'; }
+    d.onmousedown = startDrag;
+    d.ondblclick = ()=> { state.selected = { pageId: page.id, id: el.id }; openSelected(); };
+    canvas.appendChild(d);
+  });
+  openSelected();
+}
+
+/* Dragging */
+let drag = null;
+function startDrag(e){
+  e.preventDefault();
+  const id = e.currentTarget.dataset.id;
+  const page = findPage(state.currentPageId);
+  const el = page.elements.find(it=>it.id===id);
+  drag = { el, offsetX: e.offsetX, offsetY: e.offsetY };
+  document.onmousemove = dragging;
+  document.onmouseup = endDrag;
+}
+function dragging(e){
+  if(!drag) return;
+  const rect = canvas.getBoundingClientRect();
+  drag.el.x = Math.max(0, Math.round(e.clientX - rect.left - drag.offsetX));
+  drag.el.y = Math.max(0, Math.round(e.clientY - rect.top - drag.offsetY));
+  render();
+}
+function endDrag(){ document.onmousemove = null; document.onmouseup = null; drag = null; }
+
+/* Element creation */
+addPageBtn.onclick = ()=>{ const name = newPageName.value.trim() || 'Page'; createPage(name); newPageName.value=''; };
+function createPage(name){ const p = { id: mkId('page'), name: name || 'Page', elements: [] }; state.pages.push(p); state.currentPageId = p.id; renderPagesList(); render(); }
+addBox.onclick = ()=>{ const p = findPage(state.currentPageId); if(!p) return alert('Create a page first'); p.elements.push({ id: mkId('el'), type:'box', x:40, y:40, width:200, height:120, label:'Box', bgType:'solid', bgA:'#ffffff', bgB:'#ffffff', bgDir:'to right', textColor:'#000' }); render(); }
+addButton.onclick = ()=>{ const p = findPage(state.currentPageId); if(!p) return alert('Create a page first'); p.elements.push({ id: mkId('el'), type:'button', x:40, y:180, width:160, height:44, label:'Action', bgType:'solid', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', action:{type:'',value:''} }); render(); }
+
+/* Selection */
+function openSelected(){
+  const s = state.selected;
+  if(!s){ selInfo.textContent='None'; labelInput.value=''; widthInput.value=''; heightInput.value=''; bgType.value='solid'; bgA.value='#ffffff'; bgB.value='#ffffff'; bgDir.value='to right'; textColor.value='#000000'; actionType.value=''; actionValue.value=''; return; }
+  const page = findPage(s.pageId); const el = page.elements.find(x=>x.id===s.id);
+  if(!el) return;
+  selInfo.textContent = el.type + ' • ' + el.id;
+  labelInput.value = el.label || '';
+  widthInput.value = el.width;
+  heightInput.value = el.height;
+  bgType.value = el.bgType || 'solid';
+  bgA.value = el.bgA || '#ffffff';
+  bgB.value = el.bgB || el.bgA || '#ffffff';
+  bgDir.value = el.bgDir || 'to right';
+  textColor.value = el.textColor || '#000000';
+  actionType.value = el.action?.type || '';
+  actionValue.value = el.action?.value || '';
+  updateBgControls();
+  updateActionControls();
+}
+canvas.onclick = (e)=>{ if(e.target === canvas){ state.selected = null; openSelected(); render(); } };
+
+/* Apply / Delete */
+applyBtn.onclick = ()=>{
+  const s = state.selected; if(!s) return alert('No element selected');
+  const page = findPage(s.pageId); const el = page.elements.find(x=>x.id===s.id);
+  el.label = labelInput.value;
+  el.width = parseInt(widthInput.value) || el.width;
+  el.height = parseInt(heightInput.value) || el.height;
+  el.bgType = bgType.value;
+  el.bgA = bgA.value; el.bgB = bgB.value; el.bgDir = bgDir.value;
+  el.textColor = textColor.value;
+  el.action = { type: actionType.value, value: actionValue.value };
+  render();
+};
+deleteBtn.onclick = ()=>{
+  const s = state.selected; if(!s) return alert('No element selected');
+  const page = findPage(s.pageId); page.elements = page.elements.filter(x=>x.id!==s.id);
+  state.selected = null; render();
+};
+
+/* UI helpers for conditional controls */
+bgType.onchange = updateBgControls;
+function updateBgControls(){
+  const t = bgType.value;
+  if(t === 'solid'){ bgB.disabled = true; bgDir.disabled = true; dirLabel.style.opacity = '0.6'; }
+  else { bgB.disabled = false; bgDir.disabled = false; dirLabel.style.opacity = '1'; }
+}
+actionType.onchange = updateActionControls;
+function updateActionControls(){
+  const t = actionType.value;
+  if(t === 'navigate'){ actionValue.placeholder = 'Select or paste page id'; }
+  else if(t === 'openUrl'){ actionValue.placeholder = 'https://example.com'; }
+  else if(t === 'alert'){ actionValue.placeholder = 'Message to display'; }
+  else { actionValue.placeholder = ''; }
+}
+
+/* Export / Import / Copy */
+exportBtn.onclick = ()=>{ jsonArea.value = JSON.stringify(state, null, 2); };
+importBtn.onclick = ()=>{ try{ const data = JSON.parse(jsonArea.value); if(!data.pages) throw new Error('Invalid format'); state.pages = data.pages; state.currentPageId = data.currentPageId || data.pages[0]?.id || null; state.device = data.device || state.device; state.selected = null; setDeviceFromKey((state.device.w||1024)+'x'+(state.device.h||700)); render(); }catch(e){ alert('Import failed: '+e.message); } };
+copyBtn.onclick = async ()=>{ const txt = jsonArea.value || JSON.stringify(state, null, 2); try{ await navigator.clipboard.writeText(txt); alert('Copied JSON'); }catch(e){ alert('Copy failed'); } };
+
+/* Preview mode (runs actions) */
+previewBtn.onclick = ()=> openPreview(state.currentPageId || state.pages[0]?.id);
+function openPreview(startPageId){
+  previewOverlay.style.display='flex';
+  renderPreviewPage(startPageId);
+  previewOverlay.onclick = (e)=>{ if(e.target===previewOverlay) previewOverlay.style.display='none'; };
+}
+function renderPreviewPage(pageId){
+  previewCanvas.innerHTML = '';
+  const page = findPage(pageId); if(!page) return;
+  const frame = document.createElement('div'); frame.style.width='100%'; frame.style.height='100%'; frame.style.position='relative'; frame.style.background='#f7f7f7';
+  page.elements.forEach(el=>{
+    const d = document.createElement('div'); d.style.position='absolute';
+    const scaleW = 420 / state.device.w; const scaleH = 800 / state.device.h;
+    d.style.left = (el.x * scaleW) + 'px'; d.style.top = (el.y * scaleH) + 'px';
+    d.style.width = (el.width * scaleW) + 'px'; d.style.height = (el.height * scaleH) + 'px';
+    d.style.display='flex'; d.style.alignItems='center'; d.style.justifyContent='center'; d.style.boxSizing='border-box';
+    d.style.color = el.textColor || '#000';
+    if(el.bgType === 'solid') d.style.background = el.bgA;
+    else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir}, ${el.bgA}, ${el.bgB})`;
+    else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
+    d.textContent = el.label || '';
+    d.style.border = '1px solid rgba(0,0,0,0.08)';
+    d.style.cursor = el.action?.type ? 'pointer' : 'default';
+    if(el.action?.type === 'navigate' && el.action.value){
+      d.onclick = (e)=>{ e.stopPropagation(); renderPreviewPage(el.action.value); };
+    } else if(el.action?.type === 'openUrl' && el.action.value){
+      d.onclick = (e)=>{ e.stopPropagation(); window.open(el.action.value, '_blank'); };
+    } else if(el.action?.type === 'alert' && el.action.value){
+      d.onclick = (e)=>{ e.stopPropagation(); alert(el.action.value); };
+    }
+    frame.appendChild(d);
+  });
+  previewCanvas.appendChild(frame);
+}
+
+/* Device handling */
+deviceSelect.onchange = ()=> setDeviceFromKey(deviceSelect.value);
+fitBtn.onclick = () => applyDevice();
+function setDeviceFromKey(key){ const [w,h] = key.split('x').map(Number); state.device.w=w; state.device.h=h; applyDevice(); }
+window.onresize = applyDevice;
+
+/* Initialize demo content */
+setDeviceFromKey('1024x700');
+createPage('Home'); createPage('Details');
+state.pages[0].elements.push({ id: mkId('e'), type:'button', x:220, y:220, width:220, height:56, label:'Go to Details', bgType:'linear', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', action:{type:'navigate',value: state.pages[1].id} });
+state.pages[1].elements.push({ id: mkId('e'), type:'box', x:80, y:80, width:860, height:520, label:'Details', bgType:'solid', bgA:'#ffffff', textColor:'#111' });
+render();
+
+/* Small helpers */
+function mkId(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+</script>
+</body>
+</html>
