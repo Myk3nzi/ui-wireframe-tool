@@ -3,19 +3,22 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>UI Wireframe Tool — Resizable Handles</title>
+<title>UI Wireframe Tool — Shapes, Triangles, Fixed UI</title>
 <style>
-  :root{--sidebar:340px;--gap:10px}
-  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,height:100vh;display:flex;gap:var(--gap)}
-  #sidebar{width:var(--sidebar);padding:14px;box-sizing:border-box;border-right:1px solid #e6e6e6;background:#fbfbfd;overflow:auto}
-  #main{flex:1;display:flex;flex-direction:column}
-  header{height:56px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid #eee}
-  #canvasWrap{flex:1;display:flex;align-items:start;justify-content:center;padding:20px;background:#fff;overflow:auto}
+  :root{--sidebar:360px;--gap:10px}
+  html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+  body{display:flex;gap:var(--gap);height:100vh;overflow:hidden}
+  #sidebar{width:var(--sidebar);box-sizing:border-box;border-right:1px solid #e6e6e6;background:#fbfbfd;display:flex;flex-direction:column;padding:12px 14px;min-width:280px}
+  #sidebar .top{display:flex;gap:8px;align-items:center}
+  #sidebar .scroll{overflow:auto;padding-right:8px}
+  #main{flex:1;display:flex;flex-direction:column;min-width:0}
+  header{height:56px;display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid #eee;flex:0 0 56px}
+  #canvasWrap{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:18px;background:#fff;overflow:auto}
   .device-frame{background:#f3f4f6;border-radius:12px;padding:16px;box-shadow:0 8px 22px rgba(12,12,12,0.06);display:flex;align-items:center;justify-content:center}
   #canvas{position:relative;background:#fff;box-shadow:0 2px 8px rgba(10,10,10,0.04);overflow:visible}
-  .elem{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:move;user-select:none;border:1px solid rgba(0,0,0,0.08)}
+  .elem{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:move;user-select:none;border:1px solid rgba(0,0,0,0.12);min-width:20px;min-height:8px;padding:4px}
   .elem.btn{color:#fff}
-  .elem .canvas-delete { position:absolute; top: -8px; right: -8px; width:22px; height:22px; border-radius:50%; background:#ff4d4f; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:30; }
+  .elem .canvas-delete { position:absolute; top:-10px; right:-10px; width:22px; height:22px; border-radius:50%; background:#ff4d4f; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:30; }
   .resize-handle { position:absolute; width:10px; height:10px; background:#fff; border:2px solid #2563eb; border-radius:2px; box-shadow:0 2px 6px rgba(0,0,0,0.12); z-index:50; cursor: nwse-resize; }
   .handle-n { cursor: ns-resize; transform:translate(-50%,-50%); }
   .handle-s { cursor: ns-resize; transform:translate(-50%,-50%); }
@@ -33,148 +36,193 @@
   .pageItem button{padding:6px 8px}
   .selectedPage{background:#e9f6ff}
   label{display:flex;flex-direction:column;font-size:13px;gap:6px}
-  #jsonArea{width:100%;height:120px;box-sizing:border-box}
+  #jsonArea{width:100%;height:120px;box-sizing:border-box;resize:vertical;overflow:auto}
   .muted{color:#6b7280;font-size:13px}
   small{color:#6b7280}
-  #previewOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);align-items:center;justify-content:center}
+  #previewOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.25);align-items:center;justify-content:center;z-index:200}
   #previewWindow{width:420px;height:800px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.35);position:relative}
   #previewCanvas{width:100%;height:100%;position:relative;background:#f7f7f7;overflow:hidden}
   .control-grid {display:grid; grid-template-columns: 1fr 1fr; gap:8px;}
+  select:disabled,input:disabled{opacity:0.6}
+  /* triangle helper class will be applied for triangle rendering */
+  .triangle-up { width:0;height:0;border-left:50px solid transparent;border-right:50px solid transparent;border-bottom:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
+  .triangle-down { width:0;height:0;border-left:50px solid transparent;border-right:50px solid transparent;border-top:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
+  .triangle-left { width:0;height:0;border-top:50px solid transparent;border-bottom:50px solid transparent;border-right:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
+  .triangle-right { width:0;height:0;border-top:50px solid transparent;border-bottom:50px solid transparent;border-left:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
+  footer{padding:8px 12px;border-top:1px solid #eee;font-size:12px;color:#666}
 </style>
 </head>
 <body>
   <div id="sidebar">
-    <strong>Pages</strong>
-    <div id="pagesList"></div>
-    <div class="row" style="margin-top:8px">
-      <input id="newPageName" placeholder="New page name" style="flex:1"/>
-      <button id="addPageBtn">Add</button>
+    <div class="top">
+      <strong>Pages</strong>
+      <div style="flex:1"></div>
+      <button id="addPageBtn" title="Add page">+</button>
     </div>
 
-    <div class="controls">
-      <section>
-        <strong>Elements</strong>
-        <div style="margin-top:8px" class="row">
-          <select id="shapeSelect">
-            <option value="box">Box</option>
-            <option value="circle">Circle</option>
-            <option value="ellipse">Ellipse</option>
-            <option value="line">Line</option>
-            <option value="button">Button</option>
-          </select>
-          <button id="addShape">Add</button>
+    <div class="scroll" style="margin-top:8px;flex:1;min-height:0">
+      <div id="pagesList"></div>
+
+      <div style="margin-top:8px">
+        <div class="row">
+          <input id="newPageName" placeholder="New page name" style="flex:1"/>
+          <button id="createPageBtn">Create</button>
         </div>
-        <small class="muted">Choose shape then Add</small>
-      </section>
+      </div>
 
-      <section>
-        <strong>Selected element</strong>
-        <div id="selInfo" class="muted">None</div>
-        <label>Label<input id="labelInput" /></label>
+      <div class="controls">
+        <section>
+          <strong>Elements</strong>
+          <div style="margin-top:8px" class="row">
+            <select id="shapeSelect">
+              <option value="box">Box</option>
+              <option value="button">Button</option>
+              <option value="circle">Circle</option>
+              <option value="ellipse">Ellipse</option>
+              <option value="triangle">Triangle</option>
+              <option value="line">Line</option>
+            </select>
+            <button id="addShape">Add</button>
+          </div>
+          <small class="muted">Choose shape then Add</small>
+        </section>
 
-        <div class="control-grid">
-          <label>W<input id="widthInput" type="number" /></label>
-          <label>H<input id="heightInput" type="number" /></label>
-        </div>
+        <section style="margin-top:14px">
+          <strong>Selected element</strong>
+          <div id="selInfo" class="muted">None</div>
 
-        <div class="control-grid">
-          <label>Corner radius<input id="cornerRadius" type="number" min="0" /></label>
-          <label>Border width<input id="borderWidth" type="number" min="0" /></label>
-        </div>
+          <div class="control-grid" style="margin-top:8px">
+            <label>Shape
+              <select id="selShape">
+                <option value="">— select —</option>
+                <option value="box">Box</option>
+                <option value="button">Button</option>
+                <option value="circle">Circle</option>
+                <option value="ellipse">Ellipse</option>
+                <option value="triangle">Triangle</option>
+                <option value="line">Line</option>
+              </select>
+            </label>
+            <label>Triangle dir
+              <select id="triangleDir">
+                <option value="up">Up</option>
+                <option value="down">Down</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </label>
+          </div>
 
-        <div class="control-grid">
-          <label>Border style
-            <select id="borderStyle">
-              <option value="solid">solid</option>
-              <option value="dashed">dashed</option>
-              <option value="dotted">dotted</option>
+          <label style="margin-top:8px">Label<input id="labelInput" /></label>
+
+          <div class="control-grid">
+            <label>W<input id="widthInput" type="number" /></label>
+            <label>H<input id="heightInput" type="number" /></label>
+          </div>
+
+          <div class="control-grid">
+            <label>Corner radius<input id="cornerRadius" type="number" min="0" /></label>
+            <label>Border width<input id="borderWidth" type="number" min="0" /></label>
+          </div>
+
+          <div class="control-grid">
+            <label>Border style
+              <select id="borderStyle">
+                <option value="solid">solid</option>
+                <option value="dashed">dashed</option>
+                <option value="dotted">dotted</option>
+              </select>
+            </label>
+            <label>Border color<input id="borderColor" type="color" /></label>
+          </div>
+
+          <label style="margin-top:8px">Background type
+            <select id="bgType">
+              <option value="solid">Solid</option>
+              <option value="linear">Linear gradient</option>
+              <option value="radial">Radial gradient</option>
             </select>
           </label>
-          <label>Border color<input id="borderColor" type="color" /></label>
-        </div>
 
-        <label>Background type
-          <select id="bgType">
-            <option value="solid">Solid</option>
-            <option value="linear">Linear gradient</option>
-            <option value="radial">Radial gradient</option>
-          </select>
-        </label>
+          <div class="row" style="margin-top:6px">
+            <label style="flex:1">Color A<input id="bgA" type="color" /></label>
+            <label style="flex:1">Color B<input id="bgB" type="color" /></label>
+          </div>
 
-        <div class="row" style="margin-top:6px">
-          <label style="flex:1">Color A<input id="bgA" type="color" /></label>
-          <label style="flex:1">Color B<input id="bgB" type="color" /></label>
-        </div>
+          <label id="dirLabel">Direction
+            <select id="bgDir">
+              <option value="to right">to right</option>
+              <option value="to left">to left</option>
+              <option value="to bottom">to bottom</option>
+              <option value="to top">to top</option>
+              <option value="45deg">45deg</option>
+            </select>
+          </label>
 
-        <label id="dirLabel">Direction
-          <select id="bgDir">
-            <option value="to right">to right</option>
-            <option value="to left">to left</option>
-            <option value="to bottom">to bottom</option>
-            <option value="to top">to top</option>
-            <option value="45deg">45deg</option>
-          </select>
-        </label>
+          <label style="margin-top:8px">Text color<input id="textColor" type="color" /></label>
 
-        <label>Text color<input id="textColor" type="color" /></label>
+          <label style="margin-top:8px">Action type
+            <select id="actionType">
+              <option value="">None</option>
+              <option value="alert">Show alert</option>
+              <option value="openUrl">Open URL</option>
+              <option value="navigate">Navigate to page</option>
+            </select>
+          </label>
 
-        <label>Action type
-          <select id="actionType">
-            <option value="">None</option>
-            <option value="alert">Show alert</option>
-            <option value="openUrl">Open URL</option>
-            <option value="navigate">Navigate to page</option>
-          </select>
-        </label>
+          <label id="actionValueLabel" style="margin-top:8px">Action value
+            <input id="actionValue" placeholder="Message, URL, or page id" />
+            <select id="actionPageSelect" style="margin-top:6px;display:none"></select>
+          </label>
 
-        <label id="actionValueLabel">Action value
-          <input id="actionValue" placeholder="Message, URL, or page id" />
-          <select id="actionPageSelect" style="margin-top:6px;display:none"></select>
-        </label>
+          <div class="row" style="margin-top:8px">
+            <button id="applyBtn">Apply</button>
+            <button id="deleteBtn">Delete</button>
+          </div>
+        </section>
 
-        <div class="row" style="margin-top:8px">
-          <button id="applyBtn">Apply</button>
-          <button id="deleteBtn">Delete</button>
-        </div>
-      </section>
+        <section style="margin-top:14px">
+          <strong>Devices</strong>
+          <div class="row" style="margin-top:8px">
+            <select id="deviceSelect" style="flex:1">
+              <option value="1366x768">Desktop 1366×768</option>
+              <option value="1280x800">Laptop 1280×800</option>
+              <option value="1024x768">Laptop 1024×768</option>
+              <option value="1024x1366">iPad Pro 1024×1366</option>
+              <option value="768x1024">Tablet 768×1024</option>
+              <option value="414x896">Mobile Large 414×896</option>
+              <option value="375x812">Mobile 375×812</option>
+            </select>
+            <button id="fitBtn">Fit</button>
+          </div>
+          <div style="margin-top:8px"><small>Canvas size: <span id="sizeInfo">—</span></small></div>
+        </section>
 
-      <section>
-        <strong>Devices</strong>
-        <div class="row" style="margin-top:8px">
-          <select id="deviceSelect" style="flex:1">
-            <option value="1366x768">Desktop 1366×768</option>
-            <option value="1280x800">Laptop 1280×800</option>
-            <option value="1024x768">Laptop 1024×768</option>
-            <option value="1024x1366">iPad Pro 1024×1366</option>
-            <option value="768x1024">Tablet 768×1024</option>
-            <option value="414x896">Mobile Large 414×896</option>
-            <option value="375x812">Mobile 375×812</option>
-          </select>
-          <button id="fitBtn">Fit</button>
-        </div>
-        <div style="margin-top:8px"><small>Canvas size: <span id="sizeInfo">—</span></small></div>
-      </section>
-
-      <section>
-        <strong>Project</strong>
-        <div class="row" style="margin-top:8px">
-          <button id="exportBtn">Export JSON</button>
-          <button id="importBtn">Import JSON</button>
-        </div>
-        <textarea id="jsonArea" placeholder="Project JSON"></textarea>
-        <div class="row" style="margin-top:8px">
-          <button id="previewBtn">Preview</button>
-          <button id="copyBtn">Copy JSON</button>
-        </div>
-      </section>
+        <section style="margin-top:14px">
+          <strong>Project</strong>
+          <div class="row" style="margin-top:8px">
+            <button id="exportBtn">Export JSON</button>
+            <button id="importBtn">Import JSON</button>
+          </div>
+          <textarea id="jsonArea" placeholder="Project JSON"></textarea>
+          <div class="row" style="margin-top:8px">
+            <button id="previewBtn">Preview</button>
+            <button id="copyBtn">Copy JSON</button>
+          </div>
+        </section>
+      </div>
     </div>
+
+    <footer style="flex:0 0 auto">
+      Ready. Use the inspector to change shape, border, triangle direction, or resize on-canvas.
+    </footer>
   </div>
 
   <div id="main">
     <header>
       <strong id="currentPageTitle">No page</strong>
       <div style="flex:1"></div>
-      <small class="muted">Scale preview when editing</small>
+      <small class="muted">Canvas scale preview</small>
     </header>
 
     <div id="canvasWrap">
@@ -191,7 +239,7 @@
   </div>
 
 <script>
-/* Editor with resizer handles */
+/* Enhanced wireframe editor */
 const state = { pages: [], currentPageId: null, selected: null, device:{w:1024,h:700} };
 
 /* DOM refs */
@@ -202,9 +250,13 @@ const sizeInfo = document.getElementById('sizeInfo');
 
 const newPageName = document.getElementById('newPageName');
 const addPageBtn = document.getElementById('addPageBtn');
+const createPageBtn = document.getElementById('createPageBtn');
 
 const shapeSelect = document.getElementById('shapeSelect');
-const addShape = document.getElementById('addShape');
+const addShapeBtn = document.getElementById('addShape');
+
+const selShape = document.getElementById('selShape');
+const triangleDir = document.getElementById('triangleDir');
 
 const selInfo = document.getElementById('selInfo');
 const labelInput = document.getElementById('labelInput');
@@ -243,7 +295,7 @@ const copyBtn = document.getElementById('copyBtn');
 function mkId(p='id'){ return p + '_' + Math.random().toString(36).slice(2,9); }
 function findPage(id){ return state.pages.find(p=>p.id===id); }
 
-/* Device and canvas scaling */
+/* Device scaling */
 function applyDevice(){
   const maxW = Math.min(window.innerWidth - 420, 1200);
   const maxH = window.innerHeight - 140;
@@ -257,7 +309,7 @@ function applyDevice(){
   sizeInfo.textContent = state.device.w + ' × ' + state.device.h;
 }
 
-/* Pages */
+/* Pages list */
 function renderPagesList(){
   pagesList.innerHTML = '';
   state.pages.forEach(p=>{
@@ -273,12 +325,18 @@ function renderPagesList(){
     pagesList.appendChild(div);
   });
   document.getElementById('currentPageTitle').textContent = findPage(state.currentPageId)?.name || 'No page';
-  // populate page select for navigation actions
+  // populate actionPageSelect and selection shape dropdown
   actionPageSelect.innerHTML = ''; const emptyOpt = document.createElement('option'); emptyOpt.value=''; emptyOpt.textContent='Select page'; actionPageSelect.appendChild(emptyOpt);
   state.pages.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; actionPageSelect.appendChild(o); });
+  // selection-shape options prefilled
+  if(!selShape.querySelector('option[value="box"]')){
+    ['box','button','circle','ellipse','triangle','line'].forEach(val=>{
+      const o = document.createElement('option'); o.value = val; o.textContent = val.charAt(0).toUpperCase()+val.slice(1); selShape.appendChild(o);
+    });
+  }
 }
 
-/* Render canvas elements and add resize handles for selected */
+/* Render canvas and elements */
 function render(){
   renderPagesList();
   canvas.innerHTML = '';
@@ -292,28 +350,60 @@ function render(){
     d.style.display = 'flex'; d.style.alignItems='center'; d.style.justifyContent='center';
     d.style.color = el.textColor || '#000';
     d.dataset.id = el.id;
-    d.textContent = (el.type==='button' || el.type==='box') ? (el.label || (el.type==='button' ? 'Button' : 'Box')) : '';
-    // shape rendering
-    if(el.type === 'circle'){ d.style.borderRadius = '50%'; }
-    else if(el.type === 'ellipse'){ d.style.borderRadius = '50% / 30%'; }
-    else if(el.type === 'line'){ d.style.height = Math.max(2, el.borderWidth || 2) + 'px'; d.style.width = el.width + 'px'; d.style.display = 'block'; d.textContent = ''; }
-    else { d.style.borderRadius = (el.cornerRadius != null ? el.cornerRadius + 'px' : '8px'); }
-    // border
-    d.style.borderStyle = el.borderStyle || 'solid';
-    d.style.borderWidth = (el.borderWidth != null ? el.borderWidth + 'px' : '0px');
-    d.style.borderColor = el.borderColor || 'transparent';
-    // background
-    if(el.bgType === 'solid') d.style.background = el.bgA || 'transparent';
-    else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir||'to right'}, ${el.bgA}, ${el.bgB})`;
-    else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
-    if(el.type==='button'){ d.classList.add('btn'); d.style.border = 'none'; d.style.color = el.textColor || '#fff'; }
+
+    // default visible border if none
+    if(el.borderWidth == null) el.borderWidth = 1;
+    if(el.borderColor == null) el.borderColor = '#cbd5e1';
+    if(el.borderStyle == null) el.borderStyle = 'solid';
+
+    // triangle handled separately
+    if(el.type === 'triangle'){
+      // create an inner triangle element using inline SVG for better scaling
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('width','100%'); svg.setAttribute('height','100%'); svg.setAttribute('viewBox','0 0 100 100');
+      svg.style.display='block';
+      const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      let points = '50,0 0,100 100,100'; // up
+      if(el.triangleDir === 'down') points = '0,0 100,0 50,100';
+      if(el.triangleDir === 'left') points = '100,0 100,100 0,50';
+      if(el.triangleDir === 'right') points = '0,0 100,50 0,100';
+      poly.setAttribute('points', points);
+      poly.setAttribute('fill', el.bgA || '#ddd');
+      poly.setAttribute('stroke', el.borderColor || '#000');
+      poly.setAttribute('stroke-width', el.borderWidth || 1);
+      svg.appendChild(poly);
+      // clear any text content and append svg
+      d.textContent = '';
+      d.appendChild(svg);
+      d.style.background = 'transparent';
+      d.style.border = 'none';
+    } else {
+      // normal shapes
+      d.textContent = (el.type==='button' || el.type==='box') ? (el.label || '') : '';
+      if(el.type === 'circle') d.style.borderRadius = '50%';
+      else if(el.type === 'ellipse') d.style.borderRadius = '50% / 30%';
+      else if(el.type === 'line'){ d.style.height = Math.max(2, el.borderWidth || 2) + 'px'; d.style.width = el.width + 'px'; d.style.display = 'block'; d.textContent = ''; }
+      else d.style.borderRadius = (el.cornerRadius != null ? (el.cornerRadius + 'px') : '8px');
+
+      d.style.borderStyle = el.borderStyle || 'solid';
+      d.style.borderWidth = (el.borderWidth != null ? (el.borderWidth + 'px') : '1px');
+      d.style.borderColor = el.borderColor || '#cbd5e1';
+
+      if(el.bgType === 'solid') d.style.background = el.bgA || '#ffffff';
+      else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir || 'to right'}, ${el.bgA}, ${el.bgB})`;
+      else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
+
+      if(el.type==='button'){ d.classList.add('btn'); d.style.border = 'none'; d.style.color = el.textColor || '#fff'; }
+    }
+
     // events
     d.addEventListener('mousedown', startDrag);
     d.addEventListener('dblclick', ()=>{ state.selected = { pageId: page.id, id: el.id }; openSelected(); });
     d.addEventListener('click', (ev)=>{ ev.stopPropagation(); state.selected = { pageId: page.id, id: el.id }; openSelected(); render(); });
+
     canvas.appendChild(d);
 
-    // show delete X on selected element
+    // show delete X if selected
     if(state.selected && state.selected.pageId === page.id && state.selected.id === el.id){
       const delBtn = document.createElement('div');
       delBtn.className = 'canvas-delete';
@@ -327,26 +417,24 @@ function render(){
       });
       d.appendChild(delBtn);
 
-      // add 8 resize handles
-      const handles = ['nw','n','ne','e','se','s','sw','w'];
+      // add resize handles (except for line we only allow east/west)
+      const handles = el.type === 'line' ? ['w','e'] : ['nw','n','ne','e','se','s','sw','w'];
       handles.forEach(h=>{
         const hh = document.createElement('div');
         hh.className = 'resize-handle handle-' + h + ' handle-' + h;
         hh.dataset.handle = h;
-        // position handle
         const pos = {
-          nw: { left: '0%', top: '0%', transform: 'translate(-50%,-50%)' },
-          n:  { left: '50%', top: '0%', transform: 'translate(-50%,-50%)' },
-          ne: { left: '100%', top: '0%', transform: 'translate(-50%,-50%)' },
-          e:  { left: '100%', top: '50%', transform: 'translate(-50%,-50%)' },
-          se: { left: '100%', top: '100%', transform: 'translate(-50%,-50%)' },
-          s:  { left: '50%', top: '100%', transform: 'translate(-50%,-50%)' },
-          sw: { left: '0%', top: '100%', transform: 'translate(-50%,-50%)' },
-          w:  { left: '0%', top: '50%', transform: 'translate(-50%,-50%)' }
+          nw: { left: '0%', top: '0%' },
+          n:  { left: '50%', top: '0%' },
+          ne: { left: '100%', top: '0%' },
+          e:  { left: '100%', top: '50%' },
+          se: { left: '100%', top: '100%' },
+          s:  { left: '50%', top: '100%' },
+          sw: { left: '0%', top: '100%' },
+          w:  { left: '0%', top: '50%' }
         }[h];
         hh.style.left = pos.left; hh.style.top = pos.top;
-        hh.style.transform = pos.transform;
-        // cursor styling by class already in CSS
+        hh.style.transform = 'translate(-50%,-50%)';
         hh.addEventListener('mousedown', initResize);
         d.appendChild(hh);
       });
@@ -359,11 +447,11 @@ function render(){
 let drag = null;
 function startDrag(e){
   e.preventDefault();
+  // ignore if clicking on a handle or delete
+  if(e.target.classList.contains('resize-handle') || e.target.classList.contains('canvas-delete')) return;
   const id = e.currentTarget.dataset.id;
   const page = findPage(state.currentPageId);
   const el = page.elements.find(it=>it.id===id);
-  // ignore mousedown if it's on a resize handle or delete button
-  if(e.target.classList.contains('resize-handle') || e.target.classList.contains('canvas-delete')) return;
   drag = { el, offsetX: e.offsetX, offsetY: e.offsetY };
   document.addEventListener('mousemove', dragging);
   document.addEventListener('mouseup', endDrag, { once: true });
@@ -371,8 +459,8 @@ function startDrag(e){
 function dragging(e){
   if(!drag) return;
   const rect = canvas.getBoundingClientRect();
-  drag.el.x = Math.max(0, Math.round(e.clientX - rect.left - drag.offsetX));
-  drag.el.y = Math.max(0, Math.round(e.clientY - rect.top - drag.offsetY));
+  drag.el.x = Math.max(0, Math.round((e.clientX - rect.left - drag.offsetX)));
+  drag.el.y = Math.max(0, Math.round((e.clientY - rect.top - drag.offsetY)));
   render();
 }
 function endDrag(){ document.removeEventListener('mousemove', dragging); drag = null; }
@@ -397,8 +485,8 @@ function initResize(e){
     startY: e.clientY,
     orig: { x: el.x, y: el.y, w: el.width, h: el.height },
     canvasRect: rect,
-    minW: 20,
-    minH: 20
+    minW: 16,
+    minH: 16
   };
   document.addEventListener('mousemove', doResize);
   document.addEventListener('mouseup', endResize, { once: true });
@@ -406,74 +494,86 @@ function initResize(e){
 function doResize(e){
   if(!resizeState) return;
   const rs = resizeState;
-  const dx = Math.round((e.clientX - rs.startX) / (rs.canvasRect.width / parseFloat(canvas.style.width || rs.canvasRect.width)));
-  const dy = Math.round((e.clientY - rs.startY) / (rs.canvasRect.height / parseFloat(canvas.style.height || rs.canvasRect.height)));
+  const rect = rs.canvasRect;
+  // compute scale factor because canvas is scaled for display
+  const dispW = rect.width;
+  const scale = (parseFloat(canvas.style.width) || rect.width) / dispW;
+  const dx = Math.round((e.clientX - rs.startX) / (rect.width / parseFloat(canvas.style.width || rect.width)));
+  const dy = Math.round((e.clientY - rs.startY) / (rect.height / parseFloat(canvas.style.height || rect.height)));
   let nx = rs.orig.x, ny = rs.orig.y, nw = rs.orig.w, nh = rs.orig.h;
-  // handle: nw n ne e se s sw w
   if(rs.handle.includes('e')) nw = Math.max(rs.minW, rs.orig.w + dx);
   if(rs.handle.includes('s')) nh = Math.max(rs.minH, rs.orig.h + dy);
   if(rs.handle.includes('w')) { nw = Math.max(rs.minW, rs.orig.w - dx); nx = rs.orig.x + (rs.orig.w - nw); }
   if(rs.handle.includes('n')) { nh = Math.max(rs.minH, rs.orig.h - dy); ny = rs.orig.y + (rs.orig.h - nh); }
-  // apply rounded values
   rs.el.x = Math.max(0, nx);
   rs.el.y = Math.max(0, ny);
   rs.el.width = Math.max(rs.minW, nw);
   rs.el.height = Math.max(rs.minH, nh);
-  // update inspector inputs live if selected
-  if(state.selected && state.selected.id === rs.el.id) {
-    widthInput.value = rs.el.width;
-    heightInput.value = rs.el.height;
-    // position inputs not implemented in inspector (keeps simple)
-  }
+  if(state.selected && state.selected.id === rs.el.id){ widthInput.value = rs.el.width; heightInput.value = rs.el.height; }
   render();
 }
 function endResize(){ document.removeEventListener('mousemove', doResize); resizeState = null; }
 
-/* Creation */
-addPageBtn.onclick = ()=>{ const name = newPageName.value.trim() || 'Page'; createPage(name); newPageName.value=''; };
+/* Create pages and shapes */
+addPageBtn.addEventListener('click', ()=>{ createPage('Page'); });
+createPageBtn.addEventListener('click', ()=>{ const name = newPageName.value.trim() || 'Page'; createPage(name); newPageName.value=''; });
+
 function createPage(name){ const p = { id: mkId('page'), name: name || 'Page', elements: [] }; state.pages.push(p); state.currentPageId = p.id; renderPagesList(); render(); }
 
-addShape.onclick = ()=>{
+addShapeBtn.addEventListener('click', ()=>{
   const type = shapeSelect.value;
   const page = findPage(state.currentPageId);
   if(!page) return alert('Create a page first');
-  let el = { id: mkId('el'), type, x:40, y:40, width:160, height:80, label: (type==='button'?'Action':'Box'),
-             bgType:'solid', bgA:'#ffffff', bgB:'#ffffff', bgDir:'to right', textColor:'#000',
-             cornerRadius:8, borderWidth:0, borderStyle:'solid', borderColor:'#000', action:{type:'',value:''} };
-  if(type === 'circle'){ el.width = 100; el.height = 100; }
-  if(type === 'ellipse'){ el.width = 160; el.height = 100; }
-  if(type === 'line'){ el.width = 200; el.height = 4; el.borderWidth = 2; }
-  if(type === 'button'){ el.bgA = '#007bff'; el.textColor = '#fff'; el.width = 160; el.height = 44; }
+  // sensible defaults: visible border and label for visibility
+  let el = {
+    id: mkId('el'),
+    type,
+    x:40, y:40,
+    width: (type==='circle' ? 100 : (type==='ellipse' ? 160 : (type==='line' ? 200 : 160))),
+    height: (type==='circle' ? 100 : (type==='line' ? 4 : 80)),
+    label: (type==='button' ? 'Action' : (type==='line' ? '' : 'Label')),
+    bgType:'solid', bgA:(type==='button'?'#007bff':'#ffffff'), bgB:'#ffffff', bgDir:'to right',
+    textColor: (type==='button' ? '#fff' : '#111'),
+    cornerRadius:8,
+    borderWidth:1, borderStyle:'solid', borderColor:'#cbd5e1',
+    triangleDir:'up',
+    action:{type:'',value:''}
+  };
+  if(type==='line'){ el.borderWidth = 2; el.borderColor = '#94a3b8'; }
   page.elements.push(el);
   render();
-};
+});
 
-/* Selection & Inspector */
+/* Selection and inspector */
 function openSelected(){
   const s = state.selected;
   if(!s){
     selInfo.textContent='None';
+    selShape.value = '';
+    triangleDir.value = 'up';
     labelInput.value=''; widthInput.value=''; heightInput.value='';
-    cornerRadius.value=''; borderWidth.value=''; borderStyle.value='solid'; borderColor.value='#000000';
-    bgType.value='solid'; bgA.value='#ffffff'; bgB.value='#ffffff'; bgDir.value='to right'; textColor.value='#000000';
+    cornerRadius.value=''; borderWidth.value='1'; borderStyle.value='solid'; borderColor.value='#cbd5e1';
+    bgType.value='solid'; bgA.value='#ffffff'; bgB.value='#ffffff'; bgDir.value='to right'; textColor.value='#111';
     actionType.value=''; actionValue.value=''; actionPageSelect.style.display='none'; actionValue.style.display='block';
     return;
   }
   const page = findPage(s.pageId); const el = page.elements.find(x=>x.id===s.id);
   if(!el) return;
   selInfo.textContent = el.type + ' • ' + el.id;
+  selShape.value = el.type || '';
+  triangleDir.value = el.triangleDir || 'up';
   labelInput.value = el.label || '';
   widthInput.value = el.width;
   heightInput.value = el.height;
   cornerRadius.value = el.cornerRadius ?? '';
-  borderWidth.value = el.borderWidth ?? 0;
+  borderWidth.value = el.borderWidth ?? 1;
   borderStyle.value = el.borderStyle || 'solid';
-  borderColor.value = el.borderColor || '#000000';
+  borderColor.value = el.borderColor || '#cbd5e1';
   bgType.value = el.bgType || 'solid';
   bgA.value = el.bgA || '#ffffff';
   bgB.value = el.bgB || el.bgA || '#ffffff';
   bgDir.value = el.bgDir || 'to right';
-  textColor.value = el.textColor || '#000000';
+  textColor.value = el.textColor || '#111';
   actionType.value = el.action?.type || '';
   actionValue.value = el.action?.value || '';
   actionPageSelect.value = el.action?.value || '';
@@ -482,10 +582,21 @@ function openSelected(){
 }
 canvas.addEventListener('click', (e)=>{ if(e.target === canvas){ state.selected = null; openSelected(); render(); } });
 
-/* Apply / Delete from inspector */
-applyBtn.onclick = ()=>{
+/* Apply changes including changing shape */
+applyBtn.addEventListener('click', ()=>{
   const s = state.selected; if(!s) return alert('No element selected');
   const page = findPage(s.pageId); const el = page.elements.find(x=>x.id===s.id);
+  // shape change
+  const newShape = selShape.value;
+  if(newShape && newShape !== el.type){
+    // preserve common properties, set shape-specific defaults
+    el.type = newShape;
+    if(newShape==='circle'){ el.width = Math.max(20, Math.min(el.width, el.height)); el.height = el.width; }
+    if(newShape==='ellipse'){ el.height = Math.max(20, Math.round(el.height)); }
+    if(newShape==='line'){ el.height = 4; el.borderWidth = parseInt(borderWidth.value) || 2; }
+    if(newShape==='triangle'){ if(!el.triangleDir) el.triangleDir = 'up'; }
+    if(newShape==='button'){ el.bgA = el.bgA || '#007bff'; el.textColor = '#fff'; el.label = el.label || 'Action'; }
+  }
   el.label = labelInput.value;
   el.width = parseInt(widthInput.value) || el.width;
   el.height = parseInt(heightInput.value) || el.height;
@@ -496,18 +607,20 @@ applyBtn.onclick = ()=>{
   el.bgType = bgType.value;
   el.bgA = bgA.value; el.bgB = bgB.value; el.bgDir = bgDir.value;
   el.textColor = textColor.value;
-  // action store (if navigate, prefer actionPageSelect)
+  el.triangleDir = triangleDir.value;
   const at = actionType.value;
   let av = actionValue.value;
   if(at === 'navigate' && actionPageSelect.value) av = actionPageSelect.value;
   el.action = { type: at, value: av };
   render();
-};
-deleteBtn.onclick = ()=>{
+});
+
+/* Delete from inspector */
+deleteBtn.addEventListener('click', ()=>{
   const s = state.selected; if(!s) return alert('No element selected');
   const page = findPage(s.pageId); page.elements = page.elements.filter(x=>x.id!==s.id);
   state.selected = null; render();
-};
+});
 
 /* UI helpers */
 bgType.onchange = updateBgControls;
@@ -524,12 +637,12 @@ function updateActionControls(){
 }
 
 /* Export / Import / Copy */
-exportBtn.onclick = ()=>{ jsonArea.value = JSON.stringify(state, null, 2); };
-importBtn.onclick = ()=>{ try{ const data = JSON.parse(jsonArea.value); if(!data.pages) throw new Error('Invalid format'); state.pages = data.pages; state.currentPageId = data.currentPageId || data.pages[0]?.id || null; state.device = data.device || state.device; state.selected = null; renderPagesList(); render(); }catch(e){ alert('Import failed: '+e.message); } };
-copyBtn.onclick = async ()=>{ const txt = jsonArea.value || JSON.stringify(state, null, 2); try{ await navigator.clipboard.writeText(txt); alert('Copied JSON'); }catch(e){ alert('Copy failed'); } };
+exportBtn.addEventListener('click', ()=>{ jsonArea.value = JSON.stringify(state, null, 2); });
+importBtn.addEventListener('click', ()=>{ try{ const data = JSON.parse(jsonArea.value); if(!data.pages) throw new Error('Invalid format'); state.pages = data.pages; state.currentPageId = data.currentPageId || data.pages[0]?.id || null; state.device = data.device || state.device; state.selected = null; renderPagesList(); render(); }catch(e){ alert('Import failed: '+e.message); } });
+copyBtn.addEventListener('click', async ()=>{ const txt = jsonArea.value || JSON.stringify(state, null, 2); try{ await navigator.clipboard.writeText(txt); alert('Copied JSON'); }catch(e){ alert('Copy failed'); } });
 
 /* Preview */
-previewBtn.onclick = ()=> openPreview(state.currentPageId || state.pages[0]?.id);
+previewBtn.addEventListener('click', ()=> openPreview(state.currentPageId || state.pages[0]?.id));
 function openPreview(startPageId){
   previewOverlay.style.display = 'flex';
   renderPreviewPage(startPageId);
@@ -549,17 +662,31 @@ function renderPreviewPage(pageId){
     d.style.width = (el.width * sx) + 'px'; d.style.height = (el.height * sy) + 'px';
     d.style.display='flex'; d.style.alignItems='center'; d.style.justifyContent='center'; d.style.boxSizing='border-box';
     d.style.color = el.textColor || '#000';
-    if(el.bgType === 'solid') d.style.background = el.bgA;
-    else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir}, ${el.bgA}, ${el.bgB})`;
-    else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
-    d.style.borderStyle = el.borderStyle || 'solid';
-    d.style.borderWidth = (el.borderWidth != null ? (el.borderWidth * Math.max(sx,sy)) + 'px' : '0px');
-    d.style.borderColor = el.borderColor || 'transparent';
-    if(el.type === 'circle') d.style.borderRadius = '50%';
-    else if(el.type === 'ellipse') d.style.borderRadius = '50% / 30%';
-    else if(el.type === 'line'){ d.style.height = Math.max(2, (el.borderWidth||2) * Math.max(sx,sy)) + 'px'; d.style.width = (el.width * sx) + 'px'; d.textContent = ''; }
-    else d.style.borderRadius = (el.cornerRadius != null ? (el.cornerRadius * Math.max(sx,sy)) + 'px' : '8px');
-    d.textContent = (el.type==='button' || el.type==='box') ? (el.label || '') : '';
+    if(el.type === 'triangle'){
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('width','100%'); svg.setAttribute('height','100%'); svg.setAttribute('viewBox','0 0 100 100');
+      const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      let points = '50,0 0,100 100,100'; // up
+      if(el.triangleDir === 'down') points = '0,0 100,0 50,100';
+      if(el.triangleDir === 'left') points = '100,0 100,100 0,50';
+      if(el.triangleDir === 'right') points = '0,0 100,50 0,100';
+      poly.setAttribute('points', points);
+      poly.setAttribute('fill', el.bgA || '#ddd');
+      poly.setAttribute('stroke', el.borderColor || '#000');
+      poly.setAttribute('stroke-width', Math.max(1, (el.borderWidth||1) * Math.max(sx,sy)));
+      svg.appendChild(poly); d.appendChild(svg);
+    } else {
+      if(el.bgType === 'solid') d.style.background = el.bgA;
+      else if(el.bgType === 'linear') d.style.background = `linear-gradient(${el.bgDir}, ${el.bgA}, ${el.bgB})`;
+      else if(el.bgType === 'radial') d.style.background = `radial-gradient(circle, ${el.bgA}, ${el.bgB})`;
+      d.style.borderStyle = el.borderStyle || 'solid';
+      d.style.borderWidth = (el.borderWidth != null ? (el.borderWidth * Math.max(sx,sy)) + 'px' : '0px');
+      d.style.borderColor = el.borderColor || 'transparent';
+      if(el.type === 'circle') d.style.borderRadius = '50%';
+      else if(el.type === 'ellipse') d.style.borderRadius = '50% / 30%';
+      else if(el.type === 'line'){ d.style.height = Math.max(2, (el.borderWidth||2) * Math.max(sx,sy)) + 'px'; d.style.width = (el.width * sx) + 'px'; d.textContent = ''; }
+      else d.style.borderRadius = (el.cornerRadius != null ? (el.cornerRadius * Math.max(sx,sy)) + 'px' : '8px');
+      d.textContent = (el.type==='button' || el.type==='box') ? (el.label || '') : '';
+    }
     d.style.cursor = el.action?.type ? 'pointer' : 'default';
     if(el.action?.type === 'navigate' && el.action.value){ d.addEventListener('click', (ev)=>{ ev.stopPropagation(); renderPreviewPage(el.action.value); }); }
     else if(el.action?.type === 'openUrl' && el.action.value){ d.addEventListener('click', (ev)=>{ ev.stopPropagation(); window.open(el.action.value, '_blank'); }); }
@@ -577,10 +704,11 @@ deviceSelect.onchange = ()=> {
 fitBtn.onclick = () => applyDevice();
 window.onresize = applyDevice;
 
-/* Initialize demo */
-setTimeout(()=>{ state.device.w = 1024; state.device.h = 700; applyDevice(); createPage('Home'); createPage('Details'); state.pages[0].elements.push({ id: mkId('e'), type:'button', x:220, y:220, width:220, height:56, label:'Go to Details', bgType:'linear', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', cornerRadius:8, borderWidth:0, borderStyle:'solid', borderColor:'#000', action:{type:'navigate',value: state.pages[1].id} }); state.pages[1].elements.push({ id: mkId('e'), type:'box', x:80, y:80, width:860, height:520, label:'Details', bgType:'solid', bgA:'#ffffff', textColor:'#111', cornerRadius:8, borderWidth:1, borderStyle:'dashed', borderColor:'#ccc' }); render(); }, 60);
+/* Initialize demo content */
+setTimeout(()=>{ state.device.w = 1024; state.device.h = 700; applyDevice(); createPage('Home'); createPage('Details'); state.pages[0].elements.push({ id: mkId('e'), type:'button', x:220, y:220, width:220, height:56, label:'Go to Details', bgType:'linear', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', cornerRadius:8, borderWidth:1, borderStyle:'solid', borderColor:'#0666cc', action:{type:'navigate',value: state.pages[1].id} }); state.pages[1].elements.push({ id: mkId('e'), type:'box', x:80, y:80, width:860, height:520, label:'Details', bgType:'solid', bgA:'#ffffff', textColor:'#111', cornerRadius:8, borderWidth:1, borderStyle:'dashed', borderColor:'#ccc' }); render(); }, 60);
 
 </script>
 </body>
 </html>
+```
 
