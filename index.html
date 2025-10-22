@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>UI Wireframe Tool — Shapes, Triangles, Fixed UI</title>
+<title>UI Wireframe Tool — Rotate + Updated Handles</title>
 <style>
   :root{--sidebar:360px;--gap:10px}
   html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
@@ -16,18 +16,17 @@
   #canvasWrap{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:18px;background:#fff;overflow:auto}
   .device-frame{background:#f3f4f6;border-radius:12px;padding:16px;box-shadow:0 8px 22px rgba(12,12,12,0.06);display:flex;align-items:center;justify-content:center}
   #canvas{position:relative;background:#fff;box-shadow:0 2px 8px rgba(10,10,10,0.04);overflow:visible}
-  .elem{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:move;user-select:none;border:1px solid rgba(0,0,0,0.12);min-width:20px;min-height:8px;padding:4px}
+  .elem{position:absolute;display:flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:move;user-select:none;border:1px solid rgba(0,0,0,0.12);min-width:20px;min-height:8px;padding:4px;transform-origin:center center}
   .elem.btn{color:#fff}
   .elem .canvas-delete { position:absolute; top:-10px; right:-10px; width:22px; height:22px; border-radius:50%; background:#ff4d4f; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2); z-index:30; }
-  .resize-handle { position:absolute; width:10px; height:10px; background:#fff; border:2px solid #2563eb; border-radius:2px; box-shadow:0 2px 6px rgba(0,0,0,0.12); z-index:50; cursor: nwse-resize; }
+  .resize-handle { position:absolute; width:10px; height:10px; background:#fff; border:2px solid #2563eb; border-radius:2px; box-shadow:0 2px 6px rgba(0,0,0,0.12); z-index:50; }
   .handle-n { cursor: ns-resize; transform:translate(-50%,-50%); }
   .handle-s { cursor: ns-resize; transform:translate(-50%,-50%); }
   .handle-w { cursor: ew-resize; transform:translate(-50%,-50%); }
   .handle-e { cursor: ew-resize; transform:translate(-50%,-50%); }
-  .handle-ne { cursor: nesw-resize; transform:translate(-50%,-50%); }
-  .handle-nw { cursor: nwse-resize; transform:translate(-50%,-50%); }
   .handle-se { cursor: nwse-resize; transform:translate(-50%,-50%); }
   .handle-sw { cursor: nesw-resize; transform:translate(-50%,-50%); }
+  .rotate-handle { position:absolute; width:14px; height:14px; background:#fff; border:2px solid #10b981; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.12); z-index:60; cursor:grab; display:flex; align-items:center; justify-content:center; font-size:12px; color:#10b981; }
   .controls section{margin-top:12px}
   input,select,textarea,button{font-size:13px;padding:6px;border:1px solid #ddd;border-radius:6px;background:#fff}
   .row{display:flex;gap:8px;align-items:center}
@@ -43,13 +42,6 @@
   #previewWindow{width:420px;height:800px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.35);position:relative}
   #previewCanvas{width:100%;height:100%;position:relative;background:#f7f7f7;overflow:hidden}
   .control-grid {display:grid; grid-template-columns: 1fr 1fr; gap:8px;}
-  select:disabled,input:disabled{opacity:0.6}
-  /* triangle helper class will be applied for triangle rendering */
-  .triangle-up { width:0;height:0;border-left:50px solid transparent;border-right:50px solid transparent;border-bottom:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
-  .triangle-down { width:0;height:0;border-left:50px solid transparent;border-right:50px solid transparent;border-top:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
-  .triangle-left { width:0;height:0;border-top:50px solid transparent;border-bottom:50px solid transparent;border-right:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
-  .triangle-right { width:0;height:0;border-top:50px solid transparent;border-bottom:50px solid transparent;border-left:100px solid #000;background:transparent;border-radius:0;padding:0;border:none }
-  footer{padding:8px 12px;border-top:1px solid #eee;font-size:12px;color:#666}
 </style>
 </head>
 <body>
@@ -161,14 +153,17 @@
 
           <label style="margin-top:8px">Text color<input id="textColor" type="color" /></label>
 
-          <label style="margin-top:8px">Action type
-            <select id="actionType">
-              <option value="">None</option>
-              <option value="alert">Show alert</option>
-              <option value="openUrl">Open URL</option>
-              <option value="navigate">Navigate to page</option>
-            </select>
-          </label>
+          <div class="row" style="margin-top:8px">
+            <label>Rotation (deg)<input id="rotationInput" type="number" min="0" max="360" /></label>
+            <label style="flex:1">Action type
+              <select id="actionType">
+                <option value="">None</option>
+                <option value="alert">Show alert</option>
+                <option value="openUrl">Open URL</option>
+                <option value="navigate">Navigate to page</option>
+              </select>
+            </label>
+          </div>
 
           <label id="actionValueLabel" style="margin-top:8px">Action value
             <input id="actionValue" placeholder="Message, URL, or page id" />
@@ -214,7 +209,7 @@
     </div>
 
     <footer style="flex:0 0 auto">
-      Ready. Use the inspector to change shape, border, triangle direction, or resize on-canvas.
+      Ready. Drag the green rotate handle above a selected element to rotate, or enter rotation in the inspector.
     </footer>
   </div>
 
@@ -239,7 +234,7 @@
   </div>
 
 <script>
-/* Enhanced wireframe editor */
+/* Editor with rotate handle + removed top-left/top-right resize handles */
 const state = { pages: [], currentPageId: null, selected: null, device:{w:1024,h:700} };
 
 /* DOM refs */
@@ -274,6 +269,8 @@ const bgDir = document.getElementById('bgDir');
 const dirLabel = document.getElementById('dirLabel');
 const textColor = document.getElementById('textColor');
 
+const rotationInput = document.getElementById('rotationInput');
+
 const actionType = document.getElementById('actionType');
 const actionValue = document.getElementById('actionValue');
 const actionPageSelect = document.getElementById('actionPageSelect');
@@ -295,7 +292,7 @@ const copyBtn = document.getElementById('copyBtn');
 function mkId(p='id'){ return p + '_' + Math.random().toString(36).slice(2,9); }
 function findPage(id){ return state.pages.find(p=>p.id===id); }
 
-/* Device scaling */
+/* Device and canvas scaling */
 function applyDevice(){
   const maxW = Math.min(window.innerWidth - 420, 1200);
   const maxH = window.innerHeight - 140;
@@ -328,7 +325,6 @@ function renderPagesList(){
   // populate actionPageSelect and selection shape dropdown
   actionPageSelect.innerHTML = ''; const emptyOpt = document.createElement('option'); emptyOpt.value=''; emptyOpt.textContent='Select page'; actionPageSelect.appendChild(emptyOpt);
   state.pages.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; actionPageSelect.appendChild(o); });
-  // selection-shape options prefilled
   if(!selShape.querySelector('option[value="box"]')){
     ['box','button','circle','ellipse','triangle','line'].forEach(val=>{
       const o = document.createElement('option'); o.value = val; o.textContent = val.charAt(0).toUpperCase()+val.slice(1); selShape.appendChild(o);
@@ -336,7 +332,7 @@ function renderPagesList(){
   }
 }
 
-/* Render canvas and elements */
+/* Render canvas elements with rotation applied */
 function render(){
   renderPagesList();
   canvas.innerHTML = '';
@@ -351,14 +347,16 @@ function render(){
     d.style.color = el.textColor || '#000';
     d.dataset.id = el.id;
 
+    // ensure rotation property exists
+    if(el.rotation == null) el.rotation = 0;
+
     // default visible border if none
     if(el.borderWidth == null) el.borderWidth = 1;
     if(el.borderColor == null) el.borderColor = '#cbd5e1';
     if(el.borderStyle == null) el.borderStyle = 'solid';
 
-    // triangle handled separately
+    // triangle special-case (use SVG)
     if(el.type === 'triangle'){
-      // create an inner triangle element using inline SVG for better scaling
       const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
       svg.setAttribute('width','100%'); svg.setAttribute('height','100%'); svg.setAttribute('viewBox','0 0 100 100');
       svg.style.display='block';
@@ -372,13 +370,11 @@ function render(){
       poly.setAttribute('stroke', el.borderColor || '#000');
       poly.setAttribute('stroke-width', el.borderWidth || 1);
       svg.appendChild(poly);
-      // clear any text content and append svg
       d.textContent = '';
       d.appendChild(svg);
       d.style.background = 'transparent';
       d.style.border = 'none';
     } else {
-      // normal shapes
       d.textContent = (el.type==='button' || el.type==='box') ? (el.label || '') : '';
       if(el.type === 'circle') d.style.borderRadius = '50%';
       else if(el.type === 'ellipse') d.style.borderRadius = '50% / 30%';
@@ -395,6 +391,9 @@ function render(){
 
       if(el.type==='button'){ d.classList.add('btn'); d.style.border = 'none'; d.style.color = el.textColor || '#fff'; }
     }
+
+    // apply rotation transform
+    d.style.transform = `rotate(${el.rotation || 0}deg)`;
 
     // events
     d.addEventListener('mousedown', startDrag);
@@ -415,18 +414,30 @@ function render(){
         state.selected = null;
         render();
       });
+      // append delete button
       d.appendChild(delBtn);
 
-      // add resize handles (except for line we only allow east/west)
-      const handles = el.type === 'line' ? ['w','e'] : ['nw','n','ne','e','se','s','sw','w'];
+      // add rotate handle above element (centered)
+      const rotate = document.createElement('div');
+      rotate.className = 'rotate-handle';
+      rotate.title = 'Rotate';
+      // position above element - use absolute positioning relative to element
+      rotate.style.left = '50%';
+      rotate.style.top = '-16px';
+      rotate.style.transform = 'translate(-50%,-50%)';
+      rotate.textContent = '↻';
+      rotate.addEventListener('mousedown', initRotate);
+      d.appendChild(rotate);
+
+      // add resize handles (removed top-left (nw) and top-right (ne))
+      const handles = el.type === 'line' ? ['w','e','s'] : ['n','e','se','s','sw','w'];
+      // note: we keep n but removed nw and ne
       handles.forEach(h=>{
         const hh = document.createElement('div');
         hh.className = 'resize-handle handle-' + h + ' handle-' + h;
         hh.dataset.handle = h;
         const pos = {
-          nw: { left: '0%', top: '0%' },
           n:  { left: '50%', top: '0%' },
-          ne: { left: '100%', top: '0%' },
           e:  { left: '100%', top: '50%' },
           se: { left: '100%', top: '100%' },
           s:  { left: '50%', top: '100%' },
@@ -447,8 +458,8 @@ function render(){
 let drag = null;
 function startDrag(e){
   e.preventDefault();
-  // ignore if clicking on a handle or delete
-  if(e.target.classList.contains('resize-handle') || e.target.classList.contains('canvas-delete')) return;
+  // ignore if clicking on a handle, rotate handle, or delete
+  if(e.target.classList.contains('resize-handle') || e.target.classList.contains('canvas-delete') || e.target.classList.contains('rotate-handle')) return;
   const id = e.currentTarget.dataset.id;
   const page = findPage(state.currentPageId);
   const el = page.elements.find(it=>it.id===id);
@@ -459,18 +470,18 @@ function startDrag(e){
 function dragging(e){
   if(!drag) return;
   const rect = canvas.getBoundingClientRect();
+  // when element is rotated, dragging moves the bounding box top-left visually (keeps simple behavior)
   drag.el.x = Math.max(0, Math.round((e.clientX - rect.left - drag.offsetX)));
   drag.el.y = Math.max(0, Math.round((e.clientY - rect.top - drag.offsetY)));
   render();
 }
 function endDrag(){ document.removeEventListener('mousemove', dragging); drag = null; }
 
-/* Resizing */
+/* Resizing (same logic as before, without nw/ne) */
 let resizeState = null;
 function initResize(e){
   e.stopPropagation();
   const handle = e.currentTarget.dataset.handle;
-  // find parent element
   let parent = e.currentTarget.parentElement;
   while(parent && !parent.dataset.id) parent = parent.parentElement;
   if(!parent) return;
@@ -495,9 +506,6 @@ function doResize(e){
   if(!resizeState) return;
   const rs = resizeState;
   const rect = rs.canvasRect;
-  // compute scale factor because canvas is scaled for display
-  const dispW = rect.width;
-  const scale = (parseFloat(canvas.style.width) || rect.width) / dispW;
   const dx = Math.round((e.clientX - rs.startX) / (rect.width / parseFloat(canvas.style.width || rect.width)));
   const dy = Math.round((e.clientY - rs.startY) / (rect.height / parseFloat(canvas.style.height || rect.height)));
   let nx = rs.orig.x, ny = rs.orig.y, nw = rs.orig.w, nh = rs.orig.h;
@@ -514,17 +522,52 @@ function doResize(e){
 }
 function endResize(){ document.removeEventListener('mousemove', doResize); resizeState = null; }
 
-/* Create pages and shapes */
+/* Rotation */
+let rotateState = null;
+function initRotate(e){
+  e.stopPropagation();
+  // find parent element
+  let parent = e.currentTarget.parentElement;
+  while(parent && !parent.dataset.id) parent = parent.parentElement;
+  if(!parent) return;
+  const id = parent.dataset.id;
+  const page = findPage(state.currentPageId);
+  const el = page.elements.find(it=>it.id===id);
+  const rect = canvas.getBoundingClientRect();
+  // compute center of element (unscaled coordinates)
+  const elemRect = parent.getBoundingClientRect();
+  const centerX = (elemRect.left + elemRect.right) / 2;
+  const centerY = (elemRect.top + elemRect.bottom) / 2;
+  rotateState = { el, centerX, centerY, startAngle: el.rotation || 0 };
+  document.addEventListener('mousemove', doRotate);
+  document.addEventListener('mouseup', endRotate, { once: true });
+}
+function doRotate(e){
+  if(!rotateState) return;
+  const rs = rotateState;
+  // angle in degrees between center and mouse
+  const dx = e.clientX - rs.centerX;
+  const dy = e.clientY - rs.centerY;
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI); // -180..180
+  // convert to 0..360 relative to 0 deg pointing right; we'll store normalized angle
+  const deg = (angle + 90 + 360) % 360; // offset so 0 is top; adjust to taste
+  rs.el.rotation = Math.round(deg);
+  if(state.selected && state.selected.id === rs.el.id) rotationInput.value = rs.el.rotation;
+  render();
+}
+function endRotate(){ document.removeEventListener('mousemove', doRotate); rotateState = null; }
+
+/* Creation and pages */
 addPageBtn.addEventListener('click', ()=>{ createPage('Page'); });
 createPageBtn.addEventListener('click', ()=>{ const name = newPageName.value.trim() || 'Page'; createPage(name); newPageName.value=''; });
 
 function createPage(name){ const p = { id: mkId('page'), name: name || 'Page', elements: [] }; state.pages.push(p); state.currentPageId = p.id; renderPagesList(); render(); }
 
+/* Add shapes with default rotation=0 */
 addShapeBtn.addEventListener('click', ()=>{
   const type = shapeSelect.value;
   const page = findPage(state.currentPageId);
   if(!page) return alert('Create a page first');
-  // sensible defaults: visible border and label for visibility
   let el = {
     id: mkId('el'),
     type,
@@ -537,7 +580,8 @@ addShapeBtn.addEventListener('click', ()=>{
     cornerRadius:8,
     borderWidth:1, borderStyle:'solid', borderColor:'#cbd5e1',
     triangleDir:'up',
-    action:{type:'',value:''}
+    action:{type:'',value:''},
+    rotation:0
   };
   if(type==='line'){ el.borderWidth = 2; el.borderColor = '#94a3b8'; }
   page.elements.push(el);
@@ -554,6 +598,7 @@ function openSelected(){
     labelInput.value=''; widthInput.value=''; heightInput.value='';
     cornerRadius.value=''; borderWidth.value='1'; borderStyle.value='solid'; borderColor.value='#cbd5e1';
     bgType.value='solid'; bgA.value='#ffffff'; bgB.value='#ffffff'; bgDir.value='to right'; textColor.value='#111';
+    rotationInput.value = 0;
     actionType.value=''; actionValue.value=''; actionPageSelect.style.display='none'; actionValue.style.display='block';
     return;
   }
@@ -574,6 +619,7 @@ function openSelected(){
   bgB.value = el.bgB || el.bgA || '#ffffff';
   bgDir.value = el.bgDir || 'to right';
   textColor.value = el.textColor || '#111';
+  rotationInput.value = el.rotation || 0;
   actionType.value = el.action?.type || '';
   actionValue.value = el.action?.value || '';
   actionPageSelect.value = el.action?.value || '';
@@ -582,14 +628,12 @@ function openSelected(){
 }
 canvas.addEventListener('click', (e)=>{ if(e.target === canvas){ state.selected = null; openSelected(); render(); } });
 
-/* Apply changes including changing shape */
+/* Apply changes including rotation */
 applyBtn.addEventListener('click', ()=>{
   const s = state.selected; if(!s) return alert('No element selected');
   const page = findPage(s.pageId); const el = page.elements.find(x=>x.id===s.id);
-  // shape change
   const newShape = selShape.value;
   if(newShape && newShape !== el.type){
-    // preserve common properties, set shape-specific defaults
     el.type = newShape;
     if(newShape==='circle'){ el.width = Math.max(20, Math.min(el.width, el.height)); el.height = el.width; }
     if(newShape==='ellipse'){ el.height = Math.max(20, Math.round(el.height)); }
@@ -608,6 +652,7 @@ applyBtn.addEventListener('click', ()=>{
   el.bgA = bgA.value; el.bgB = bgB.value; el.bgDir = bgDir.value;
   el.textColor = textColor.value;
   el.triangleDir = triangleDir.value;
+  el.rotation = parseInt(rotationInput.value) || 0;
   const at = actionType.value;
   let av = actionValue.value;
   if(at === 'navigate' && actionPageSelect.value) av = actionPageSelect.value;
@@ -662,6 +707,8 @@ function renderPreviewPage(pageId){
     d.style.width = (el.width * sx) + 'px'; d.style.height = (el.height * sy) + 'px';
     d.style.display='flex'; d.style.alignItems='center'; d.style.justifyContent='center'; d.style.boxSizing='border-box';
     d.style.color = el.textColor || '#000';
+    d.style.transform = `rotate(${el.rotation || 0}deg)`;
+    d.style.transformOrigin = 'center center';
     if(el.type === 'triangle'){
       const svg = document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('width','100%'); svg.setAttribute('height','100%'); svg.setAttribute('viewBox','0 0 100 100');
       const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
@@ -705,9 +752,9 @@ fitBtn.onclick = () => applyDevice();
 window.onresize = applyDevice;
 
 /* Initialize demo content */
-setTimeout(()=>{ state.device.w = 1024; state.device.h = 700; applyDevice(); createPage('Home'); createPage('Details'); state.pages[0].elements.push({ id: mkId('e'), type:'button', x:220, y:220, width:220, height:56, label:'Go to Details', bgType:'linear', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', cornerRadius:8, borderWidth:1, borderStyle:'solid', borderColor:'#0666cc', action:{type:'navigate',value: state.pages[1].id} }); state.pages[1].elements.push({ id: mkId('e'), type:'box', x:80, y:80, width:860, height:520, label:'Details', bgType:'solid', bgA:'#ffffff', textColor:'#111', cornerRadius:8, borderWidth:1, borderStyle:'dashed', borderColor:'#ccc' }); render(); }, 60);
+setTimeout(()=>{ state.device.w = 1024; state.device.h = 700; applyDevice(); createPage('Home'); createPage('Details'); state.pages[0].elements.push({ id: mkId('e'), type:'button', x:220, y:220, width:220, height:56, label:'Go to Details', bgType:'linear', bgA:'#007bff', bgB:'#0056d6', bgDir:'to right', textColor:'#fff', cornerRadius:8, borderWidth:1, borderStyle:'solid', borderColor:'#0666cc', action:{type:'navigate',value: state.pages[1].id}, rotation:0 }); state.pages[1].elements.push({ id: mkId('e'), type:'box', x:80, y:80, width:860, height:520, label:'Details', bgType:'solid', bgA:'#ffffff', textColor:'#111', cornerRadius:8, borderWidth:1, borderStyle:'dashed', borderColor:'#ccc', rotation:0 }); render(); }, 60);
 
 </script>
 </body>
 </html>
-```
+
